@@ -843,52 +843,54 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildEmptyMonthCard() {
     return Center(
-      child: Card(
-        //widzet z zaokraglonymi rogami i cieniem
-        margin: const EdgeInsets.all(24), //odpycha karte od krawedzi telfonu
-        elevation: 10, //wielkosc cienia pod kartą (efekt 3D)
-        color: AppColors.primaryButton,
-        child: Padding(
-          padding: const EdgeInsets.all(
-            32,
-          ), //odpycha napis i ikone od krawedzi karty
-          child: Column(
-            mainAxisSize: MainAxisSize.min, //karta ma być tak wysoka jak jej zawartosc nie na caly ekran
-            children: [
-              Icon(
-                Icons.account_balance_wallet_outlined,
-                size: 64,
-                color: AppColors.appBarText,
-              ),
-              const SizedBox(height: 16), //pusty odstęp (w pionie bo collumn)
-              Text(
-                'Brak budżetu na ${_monthNames[_selectedMonth - 1]} $_selectedYear',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+      child: SingleChildScrollView(
+        child: Card(
+          //widzet z zaokraglonymi rogami i cieniem
+          margin: const EdgeInsets.all(24), //odpycha karte od krawedzi telfonu
+          elevation: 10, //wielkosc cienia pod kartą (efekt 3D)
+          color: AppColors.primaryButton,
+          child: Padding(
+            padding: const EdgeInsets.all(
+              32,
+            ), //odpycha napis i ikone od krawedzi karty
+            child: Column(
+              mainAxisSize: MainAxisSize.min, //karta ma być tak wysoka jak jej zawartosc nie na caly ekran
+              children: [
+                Icon(
+                  Icons.account_balance_wallet_outlined,
+                  size: 64,
                   color: AppColors.appBarText,
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Zacznij od określenia kwoty, jaką dysponujesz w tym miesiącu.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: AppColors.sub_text),
-              ),
-              const SizedBox(height: 24),
-              FilledButton.icon(
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.pageBackground,
+                const SizedBox(height: 16), //pusty odstęp (w pionie bo collumn)
+                Text(
+                  'Brak budżetu na ${_monthNames[_selectedMonth - 1]} $_selectedYear',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.appBarText,
+                  ),
                 ),
-                onPressed: _showSetBudgetDialog,
-                icon: const Icon(Icons.add),
-                label: const Text(
-                  'Dodaj budżet na ten miesiąc',
-                  style: TextStyle(color: AppColors.appBarText),
+                const SizedBox(height: 8),
+                Text(
+                  'Zacznij od określenia kwoty, jaką dysponujesz w tym miesiącu.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: AppColors.sub_text),
                 ),
-              ),
-            ],
+                const SizedBox(height: 24),
+                FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.pageBackground,
+                  ),
+                  onPressed: _showSetBudgetDialog,
+                  icon: const Icon(Icons.add),
+                  label: const Text(
+                    'Dodaj budżet na ten miesiąc',
+                    style: TextStyle(color: AppColors.appBarText),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
