@@ -398,6 +398,21 @@ class _HomeScreenState extends State<HomeScreen> {
 
   //wykres + legenda
   Widget _buildActiveMonthView(MonthlyBudget budget) {
+    //jaki % budzetu to wolne srodki
+    final double percentage =
+        (budget.initialBudget != null && budget.initialBudget! > 0)
+        ? (budget.freeFunds / budget.initialBudget!) * 100
+        : 0;
+
+    //kolor na podstawie %
+    Color fundsColor;
+    if (percentage >= 50) {
+      fundsColor = AppColors.freeFunds;
+    } else if (percentage >= 30) {
+      fundsColor = AppColors.midBudget;
+    } else {
+      fundsColor = AppColors.expense;
+    }
     return SingleChildScrollView(
       child: Column(
         children: [
@@ -426,6 +441,25 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
           //napis z calkowitym budzetem
+
+          RichText(
+            text: TextSpan(
+              //podstawowy tekst i jego styl
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: AppColors.sub_text,
+              ),
+              text: 'Dostępne środki: ',
+              children: [
+                TextSpan(
+                  //osobny fragment textu ktory moze miec swoj wlasny styl
+                  text: '${budget.freeFunds.toStringAsFixed(2)} PLN',
+                  style: TextStyle(color: fundsColor),
+                ),
+              ],
+            ),
+          ),
 
           const SizedBox(height: 24),
 
