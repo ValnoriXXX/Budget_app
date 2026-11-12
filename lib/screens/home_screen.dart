@@ -500,14 +500,14 @@ class _HomeScreenState extends State<HomeScreen> {
                 value: 0,
                 label: Padding(
                   padding: EdgeInsets.symmetric(horizontal: 12),
-                  child: Text('Ogólny'),
+                  child: Text('Widok budżetu'),
                 ),
               ),
               ButtonSegment(
                 value: 1,
                 label: Padding(
                   padding: EdgeInsets.symmetric(horizontal: 12),
-                  child: Text('Szczegółowy'),
+                  child: Text('Widok transakcji'),
                 ),
               ),
             ],
@@ -556,8 +556,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   onPressed: () => _showLegendSheet(budget),
-                  child: const Text(
-                    'Legenda i kwoty',
+                  child: Text(
+                    _currentChartIndex == 0
+                        ? 'Kategorie budżetu'
+                        : 'Kategorie transakcji',
                     style: TextStyle(color: AppColors.appBarText, fontSize: 16),
                   ),
                 ),
