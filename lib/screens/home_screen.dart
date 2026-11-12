@@ -20,6 +20,8 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedYear = DateTime.now().year;
   int _selectedMonth = DateTime.now().month;
   int _currentChartIndex = 0; //0-glowny wykres 1-wykres podkategorii
+  SubCategory? _touchedCategory; //zapamietuje w jaka kategorie kliknelismy
+  bool _isChartDelaying = false; //blokuje wykres w trakcie animacji
 
   static const List<String> _monthNames = [
     'Styczeń',
@@ -371,6 +373,36 @@ class _HomeScreenState extends State<HomeScreen> {
       height: 220,
       child: PieChart(
         PieChartData(
+          pieTouchData: PieTouchData(
+            touchCallback: (FlTouchEvent event, pieTouchResponse) {
+              //reagujemy tylko na pojedyczne pelne klikniecie gdy nie ma blokady
+              if (event is FlTapUpEvent && !_isChartDelaying) {
+                final touchedIndex =
+                    pieTouchResponse?.touchedSection?.touchedSectionIndex;
+
+                if (touchedIndex != null && touchedIndex >= 0) {
+                  // Odszukujemy, jaka to kategoria na podstawie indeksu wycinka
+                  final category = totals.keys.elementAt(touchedIndex);
+
+                  setState(() {
+                    _touchedCategory = category;
+                    _isChartDelaying = true; // Włączamy blokadę na 1 sekundę
+                  });
+
+                  // Odliczamy sekunde, pozwalamy fl_chart zrobić animację i otwieramy panel
+                  Future.delayed(const Duration(milliseconds: 300), () {
+                    if (!mounted) return;
+                    setState(() {
+                      _touchedCategory =
+                          null; // Cofa animację wykresu (chowa wycinek)
+                      _isChartDelaying = false; // Zdejmuje blokadę
+                    });
+                    _showCategoryTransactionsSheet(budget, category);
+                  });
+                }
+              }
+            },
+          ),
           sectionsSpace: 4,
           centerSpaceRadius: 40,
           sections: totals.entries.map((entry) {
@@ -380,11 +412,27 @@ class _HomeScreenState extends State<HomeScreen> {
                 (amount / totalSpent) *
                 100; //jaki % wydatkow to dana podkategoria
 
+            //sprawdzamy czy konkretny wycinek został kliknięty i jeśli tak to zwiększamy promien
+            final isTouched = category == _touchedCategory;
+            final radius = isTouched ? 60.0 : 50.0;
+
+            String titleText;
+            if (percentage > 0 && percentage < 1) {
+              titleText = '<1%';
+            } else {
+              titleText = '${percentage.toStringAsFixed(0)}%';
+            }
+
+            final showTitle =
+                percentage >=
+                3; //jesli wycinek ma >= 3% to nie pokazujemy tytulu
+
             return PieChartSectionData(
               value: amount,
               color: category.color,
-              radius: 50,
-              title: '${percentage.toStringAsFixed(0)}%',
+              radius: radius,
+              showTitle: showTitle,
+              title: titleText,
               titleStyle: const TextStyle(
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
@@ -392,6 +440,9 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           }).toList(),
         ),
+        //parametry animacji (plynne wysuwanie)
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
       ),
     );
   }
@@ -848,6 +899,195 @@ class _HomeScreenState extends State<HomeScreen> {
                               );
                             });
                             // setSheetState odświeża sam panel (ukrywa przycisk usuwania)
+                            setSheetState(() {
+                              selectedTransaction.clear();
+                            });
+                          },
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            color: Colors.white,
+                          ),
+                          label: Text(
+                            'Usuń (${selectedTransaction.length})',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  // Panel wysuwany z transakcjami tylko z wybranej kategorii (po kliknięciu w wykres)
+  void _showCategoryTransactionsSheet(
+    MonthlyBudget budget,
+    SubCategory category,
+  ) {
+    final Set<String> selectedTransaction = {};
+
+    // Wyciągamy z budżetu tylko transakcje pasujące do klikniętej kategorii
+    final categoryTransactions = budget.transactions
+        .where((tx) => tx.subCategory == category)
+        .toList();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.primaryButton,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            return DraggableScrollableSheet(
+              initialChildSize: 0.6,
+              minChildSize: 0.4,
+              maxChildSize: 0.9,
+              expand: false,
+              builder: (context, scrollController) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 16,
+                  ),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      //Tytuł to kolorowa ikona i nazwa wybranej kategorii
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircleAvatar(
+                            backgroundColor: category.color,
+                            radius: 12,
+                          ),
+                          const SizedBox(width: 12),
+                          Text(
+                            category.label,
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.appBarText,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      Expanded(
+                        child: categoryTransactions.isEmpty
+                            ? const Center(
+                                child: Text(
+                                  'Brak transakcji.',
+                                  style: TextStyle(color: AppColors.sub_text),
+                                ),
+                              )
+                            : ListView(
+                                controller: scrollController,
+                                // Ładujemy naszą przefiltrowaną listę
+                                children: categoryTransactions.reversed.map((
+                                  tx,
+                                ) {
+                                  final isSelected = selectedTransaction
+                                      .contains(tx.id);
+                                  return Card(
+                                    color: isSelected
+                                        ? AppColors.expense.withValues(
+                                            alpha: 0.15,
+                                          )
+                                        : AppColors.monthBar,
+                                    margin: const EdgeInsets.only(bottom: 12),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                      side: BorderSide(
+                                        color: isSelected
+                                            ? AppColors.expense
+                                            : Colors.transparent,
+                                        width: 1,
+                                      ),
+                                    ),
+                                    child: ListTile(
+                                      onTap: () {
+                                        setSheetState(() {
+                                          if (isSelected) {
+                                            selectedTransaction.remove(tx.id);
+                                          } else {
+                                            selectedTransaction.add(tx.id);
+                                          }
+                                        });
+                                      },
+                                      title: Text(
+                                        tx.title,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          color: AppColors.appBarText,
+                                        ),
+                                      ),
+                                      subtitle: Text(
+                                        '${tx.date.day}.${tx.date.month}.${tx.date.year}',
+                                        style: const TextStyle(
+                                          color: AppColors.sub_text,
+                                        ),
+                                      ),
+                                      trailing: isSelected
+                                          ? const Icon(
+                                              Icons.check_circle,
+                                              color: AppColors.expense,
+                                            )
+                                          : Text(
+                                              '${tx.price.toStringAsFixed(2)} PLN',
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 15,
+                                                color: AppColors.appBarText,
+                                              ),
+                                            ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                      ),
+
+                      // Obsługa usuwania przefiltrowanych transakcji
+                      if (selectedTransaction.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: AppColors.expense,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            minimumSize: const Size(double.infinity, 50),
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              // Usuwamy z głównego budżetu
+                              budget.transactions.removeWhere(
+                                (tx) => selectedTransaction.contains(tx.id),
+                              );
+                              // Od razu usuwamy też z podglądu naszej lokalnej listy, żeby panel nie zwariował
+                              categoryTransactions.removeWhere(
+                                (tx) => selectedTransaction.contains(tx.id),
+                              );
+                            });
                             setSheetState(() {
                               selectedTransaction.clear();
                             });
